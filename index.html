@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <style>
+        html, body {
+            height: 100%;
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+        }
+
+        .CodeMirror {
+            flex: 1;
+        }
+    </style>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+    <link rel="stylesheet" href="./node_modules/simplemde/dist/simplemde.min.css">
+    <script src="./node_modules/simplemde/dist/simplemde.min.js"></script>
+    <title>Document</title>
+  </head>
+  <body ondrop="dropHandler(event);">
+    <h1>Editor</h1>
+    <textarea id="editor"></textarea>
+    <script>
+      function dropHandler(event) {
+        event.preventDefault();
+        if (event.dataTransfer.items) {
+          if (event.dataTransfer.items[0].kind === 'file') {
+            var file = event.dataTransfer.items[0].getAsFile();
+            console.log(`Dropping file ${file.path}`)
+            var reader = new FileReader();
+            reader.onload = e => {
+              editor.value(e.target.result);
+            };
+            reader.readAsText(file);
+          }
+        }
+      }
+    </script>
+    <script>
+          var editor = new SimpleMDE({
+            element: document.getElementById('editor')
+          });
+
+          const { ipcRenderer } = require('electron');
+
+          ipcRenderer.on('editor-event', (event, arg) => {
+            console.log(arg);
+            event.sender.send('editor-reply', `Received ${arg}`);
+            if (arg === 'toggle-bold') {
+              editor.toggleBold();
+            }
+            if (arg === 'toggle-italic') {
+              editor.toggleItalic();
+            }
+            if (arg === 'save') {
+              event.sender.send('save', editor.value());
+            }
+          });
+
+          ipcRenderer.on('load', (event, content) => {
+            if (content) {
+              editor.value(content);
+            }
+          });
+
+          ipcRenderer.send('editor-reply', 'Page Loaded');
+    </script>
+  </body>
+</html>
